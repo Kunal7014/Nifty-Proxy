@@ -1,1 +1,823 @@
-cat /mnt/user-data/outputs/nifty-dashboard.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIFTY 50 — Smart Money Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --card: #111820;
+    --border: #1e2d3d;
+    --accent: #00ff88;
+    --danger: #ff3355;
+    --warn: #ffaa00;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --glow-green: 0 0 20px rgba(0,255,136,0.3);
+    --glow-red: 0 0 20px rgba(255,51,85,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { 
+    position: relative; 
+    z-index: 1;
+    max-width: 1400px; 
+    margin: 0 auto; 
+    padding: 20px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0 30px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--accent), #00ccff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .logo span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    display: block;
+    -webkit-text-fill-color: var(--muted);
+    letter-spacing: 6px;
+    margin-top: -6px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* Top metrics */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .metric-card.danger::before { background: linear-gradient(90deg, var(--danger), transparent); }
+  .metric-card.warn::before { background: linear-gradient(90deg, var(--warn), transparent); }
+
+  .metric-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .metric-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .metric-value.green { color: var(--accent); }
+  .metric-value.red { color: var(--danger); }
+  .metric-value.yellow { color: var(--warn); }
+
+  .metric-sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .panel-body { padding: 20px; }
+
+  /* Direction Signal */
+  .signal-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    padding: 30px;
+    text-align: center;
+  }
+
+  .signal-arrow {
+    font-size: 4rem;
+    animation: float 2s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .signal-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 6px;
+  }
+
+  .signal-confidence {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* OI Bar Chart */
+  .oi-bar-container { margin-bottom: 16px; }
+
+  .oi-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .oi-bar {
+    height: 32px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+  }
+
+  .oi-fill-call {
+    background: linear-gradient(90deg, var(--accent), rgba(0,255,136,0.5));
+    transition: width 1s ease;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: 0.65rem;
+    font-family: 'Space Mono', monospace;
+    color: #000;
+    font-weight: 700;
+  }
+
+  .oi-fill-put {
+    background: linear-gradient(90deg, var(--danger), rgba(255,51,85,0.5));
+    transition: width 1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    font-size: 0.65rem;
+    font-family: 'Space Mono', monospace;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  /* Options Chain Table */
+  .chain-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .chain-table th {
+    padding: 10px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .chain-table td {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(30,45,61,0.5);
+    transition: background 0.2s;
+  }
+
+  .chain-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .chain-table .strike-col {
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
+    font-weight: 700;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  .chain-table .atm { background: rgba(0,255,136,0.05); }
+  .chain-table .atm .strike-col { color: var(--accent); }
+
+  .call-oi { color: var(--accent); }
+  .put-oi { color: var(--danger); }
+
+  .high-oi { font-weight: 700; }
+
+  /* Max Pain Meter */
+  .max-pain-visual {
+    position: relative;
+    height: 80px;
+    margin: 20px 0;
+  }
+
+  .pain-track {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    height: 4px;
+    background: var(--border);
+    transform: translateY(-50%);
+    border-radius: 2px;
+  }
+
+  .pain-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger), var(--warn), var(--accent));
+    border-radius: 2px;
+    width: 60%;
+  }
+
+  .pain-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    background: var(--warn);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255,170,0,0.6);
+  }
+
+  .pain-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  /* FII DII */
+  .fii-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fii-row:last-child { border-bottom: none; }
+
+  .fii-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  .fii-bar-wrap {
+    flex: 1;
+    height: 24px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .fii-bar-inner {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    font-size: 0.6rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    transition: width 1s ease;
+  }
+
+  .fii-amount {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    width: 100px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* PCR Gauge */
+  .pcr-gauge {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 0;
+  }
+
+  .gauge-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+  }
+
+  .gauge-circle svg { transform: rotate(-90deg); }
+
+  .gauge-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .gauge-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pcr-info { flex: 1; }
+
+  .pcr-status {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .pcr-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Liquidity Zones */
+  .zone-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(30,45,61,0.5);
+  }
+
+  .zone-item:last-child { border-bottom: none; }
+
+  .zone-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .zone-level {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    width: 80px;
+  }
+
+  .zone-type {
+    flex: 1;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .zone-strength {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+  }
+
+  /* Refresh button */
+  .refresh-btn {
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    background: rgba(0,255,136,0.2);
+    box-shadow: var(--glow-green);
+  }
+
+  /* Ticker */
+  .ticker-wrap {
+    background: rgba(0,255,136,0.05);
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+
+  .ticker-label {
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .ticker-scroll {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .ticker-inner {
+    display: inline-block;
+    animation: scroll 30s linear infinite;
+  }
+
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .ticker-item { 
+    display: inline-block;
+    margin-right: 40px;
+    color: var(--muted);
+  }
+
+  .ticker-item span { 
+    margin-left: 6px;
+  }
+
+  .ticker-item .up { color: var(--accent); }
+  .ticker-item .down { color: var(--danger); }
+
+  /* Smart Money signal */
+  .sm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .sm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .sm-icon { font-size: 1.5rem; margin-bottom: 8px; }
+  .sm-title { font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; margin-bottom: 6px; }
+  .sm-val { font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700; }
+
+  /* Loading spinner */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+  }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 20px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.2);
+    border-radius: 3px;
+    color: var(--accent);
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+    .sm-grid { grid-template-columns: repeat(2, 1fr); }
+    .logo { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      NIFTY 50
+      <span>SMART MONEY DASHBOARD</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        <span id="last-update">LOADING...</span>
+      </div>
+      <button class="refresh-btn" onclick="loadAllData()">⟳ REFRESH</button>
+    </div>
+  </div>
+
+  <!-- Ticker -->
+  <div class="ticker-wrap">
+    <div class="ticker-label">NIFTY50</div>
+    <div class="ticker-scroll">
+      <div class="ticker-inner" id="ticker-inner">
+        <span class="ticker-item">Loading market data...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Metrics -->
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-label">NIFTY 50</div>
+      <div class="metric-value green" id="nifty-price">--</div>
+      <div class="metric-sub" id="nifty-change">Loading...</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">MAX PAIN</div>
+      <div class="metric-value yellow" id="max-pain">--</div>
+      <div class="metric-sub" id="max-pain-dist">Calculating...</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">PCR RATIO</div>
+      <div class="metric-value" id="pcr-val" style="color:var(--warn)">--</div>
+      <div class="metric-sub" id="pcr-signal">Loading...</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">MARKET BIAS</div>
+      <div class="metric-value" id="bias-val">--</div>
+      <div class="metric-sub" id="bias-sub">Analyzing...</div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="main-grid">
+
+    <!-- Direction Signal -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ SMART MONEY DIRECTION</div>
+        <span class="tag">AI ANALYSIS</span>
+      </div>
+      <div class="panel-body">
+        <div class="signal-box" id="signal-box">
+          <div class="loading"><div class="spinner"></div> Analyzing market...</div>
+        </div>
+        <div class="sm-grid" id="sm-grid" style="display:none">
+          <div class="sm-card">
+            <div class="sm-icon">🏦</div>
+            <div class="sm-title">FII STANCE</div>
+            <div class="sm-val" id="fii-stance">--</div>
+          </div>
+          <div class="sm-card">
+            <div class="sm-icon">📊</div>
+            <div class="sm-title">OI TREND</div>
+            <div class="sm-val" id="oi-trend">--</div>
+          </div>
+          <div class="sm-card">
+            <div class="sm-icon">⚡</div>
+            <div class="sm-title">MOMENTUM</div>
+            <div class="sm-val" id="momentum">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PCR Gauge -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ PUT/CALL RATIO</div>
+        <span class="tag">SENTIMENT</span>
+      </div>
+      <div class="panel-body">
+        <div class="pcr-gauge">
+          <div class="gauge-circle">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#1e2d3d" stroke-width="10"/>
+              <circle cx="60" cy="60" r="50" fill="none" id="gauge-arc"
+                stroke="#ffaa00" stroke-width="10"
+                stroke-dasharray="314" stroke-dashoffset="157"
+                stroke-linecap="round"/>
+            </svg>
+            <div class="gauge-text">
+              <span id="gauge-pcr">--</span>
+              <span class="gauge-sub">PCR</span>
+            </div>
+          </div>
+          <div class="pcr-info">
+            <div class="pcr-status" id="pcr-status">NEUTRAL</div>
+            <div class="pcr-desc" id="pcr-desc">Loading PCR data to determine market sentiment...</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted); padding-top:10px; border-top:1px solid var(--border);">
+          <span>PCR &lt; 0.7 = BULLISH</span>
+          <span>PCR 0.7–1.0 = NEUTRAL</span>
+          <span>PCR &gt; 1.0 = BEARISH</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OI Analysis -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ CALL vs PUT OI</div>
+        <span class="tag">OPEN INTEREST</span>
+      </div>
+      <div class="panel-body" id="oi-body">
+        <div class="loading"><div class="spinner"></div> Fetching OI data...</div>
+      </div>
+    </div>
+
+    <!-- FII DII -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ FII / DII ACTIVITY</div>
+        <span class="tag">INSTITUTIONAL</span>
+      </div>
+      <div class="panel-body" id="fii-body">
+        <div class="loading"><div class="spinner"></div> Fetching FII data...</div>
+      </div>
+    </div>
+
+    <!-- Options Chain -->
+    <div class="panel full-width">
+      <div class="panel-header">
+        <div class="panel-title">◈ OPTIONS CHAIN — KEY STRIKES</div>
+        <span class="tag">LIVE DATA</span>
+      </div>
+      <div class="panel-body" style="padding:0; overflow-x:auto;" id="chain-body">
+        <div class="loading"><div class="spinner"></div> Building options chain...</div>
+      </div>
+    </div>
+
+    <!-- Liquidity Zones -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ LIQUIDITY ZONES</div>
+        <span class="tag">SMART MONEY</span>
+      </div>
+      <div class="panel-body" id="zones-body">
+        <div class="loading"><div class="spinner"></div> Calculating zones...</div>
+      </div>
+    </div>
+
+    <!-- Max Pain Visual -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">◈ MAX PAIN ANALYSIS</div>
+        <span class="tag">EXPIRY TARGET</span>
+      </div>
+      <div class="panel-body" id="maxpain-body">
+        <div class="loading"><div class="spinner"></div> Computing max pain...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Data sourced via NSE public endpoints &nbsp;|&nbsp; 
+    Refreshes every 5 minutes &nbsp;|&nbsp;
+    <span class="tag">NOT FINANCIAL ADVICE</span>
+  </div>
+
+</div>
+
+<script>
+// ===========================
